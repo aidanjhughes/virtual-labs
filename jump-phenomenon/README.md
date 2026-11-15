@@ -69,7 +69,6 @@ the frequency or amplitude changes, so the response depends on its history.
 
 Think about:
 - Why does the jump phenomenon occur?
-- If we looked at the acceleration response, rather than displacement, would we see different harmonics? If so, why?
 - If the Duffing oscillator was asymmetric (i.e. includes a $k_2x^2$ stiffness term) which harmonics might we see?
 
 ## Spoilers: System behaviour (1–60 Hz sweeps, $\Delta f = 0.5$ Hz)
