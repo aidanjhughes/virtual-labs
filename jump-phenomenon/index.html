@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<!--
+  Virtual Lab: The Jump Phenomenon, v1.0
+  SPDX-License-Identifier: MIT
+
+  MIT License
+
+  Copyright (c) 2026 Aidan Hughes
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtual Lab: Jump Phenomenon in a Nonlinear Beam</title>
+<meta name="author" content="Aidan Hughes, Dynamics Research Group, University of Sheffield">
+<style>
+  :root {
+    --bg: #f2f4f8;
+    --panel: #ffffff;
+    --ink: #1d2433;
+    --muted: #5b6578;
+    --line: #d9dee7;
+    --accent: #2563eb;
+    --red: #d62728;
+    --force: #2a9d55;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { padding: 8px 16px; display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; }
+  header .eq { color: var(--muted); font-size: 13px; }
+  header .eq b { color: var(--ink); font-weight: 600; }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+  .panel > h2 { font-size: 12px; margin: 0; padding: 7px 12px; border-bottom: 1px solid var(--line);
+    color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; flex: none; }
+  .canvas-wrap { flex: 1; min-height: 0; position: relative; }
+  .canvas-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #overlay { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 10; }
+
+  /* ---- controls ---- */
+  .controls { overflow: auto; padding: 8px 12px 10px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 10px; align-content: start; }
+  .controls > .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  @media (max-width: 1150px) { .controls { grid-template-columns: minmax(0, 1fr); } }
+  fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0; padding: 6px 10px 8px; }
+  legend { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 4px; }
+  .ctl { margin: 4px 0 6px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px; }
+  .ctl label output { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 6px; }
+  .row input[type=range] { flex: 1; min-width: 60px; }
+  input[type=number] { width: 70px; font: inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; }
+  select { font: inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; }
+  button { font: inherit; padding: 4px 10px; border: 1px solid #c3cad6; border-radius: 5px; background: #f7f8fb;
+    cursor: pointer; white-space: nowrap; }
+  button:hover:not(:disabled) { background: #eaeef5; }
+  button:disabled, input:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #1d4fd0; }
+  .sweep-grid { display: grid; grid-template-columns: auto auto; gap: 4px 8px; align-items: center;
+    justify-content: start; font-size: 13px; }
+  .sweep-grid input[type=number] { width: 62px; }
+  .opt { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; margin-top: 6px; cursor: pointer; }
+  .opt input { margin-top: 3px; }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .progress { height: 6px; background: #e6e9ef; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+  .readouts { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 13px; }
+  .readouts dt { color: var(--muted); }
+  .readouts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+  .status-settled { color: #1b8a4a; }
+  .status-settling { color: #b26a00; }
+
+  /* ---- gain bar ---- */
+  .gainbar { flex: none; display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 6px 12px 8px;
+    border-top: 1px solid var(--line); font-size: 13px; }
+  .gainbar .spacer { flex: 1; }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; user-select: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .track { width: 38px; height: 20px; border-radius: 10px; background: #c3cad6; position: relative; transition: background .15s; }
+  .switch .track::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: left .15s; }
+  .switch input:checked + .track { background: var(--red); }
+  .switch input:checked + .track::after { left: 20px; }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .switch input:disabled + .track { opacity: .6; }
+  .chk { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+
+  footer { flex: none; padding: 0 16px 6px; font-size: 12px; color: var(--muted); text-align: right; }
+  footer a { color: inherit; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-rows: minmax(340px, auto); }
+    body { height: auto; }
+    html, body { height: auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Virtual Lab: The Jump Phenomenon</h1>
+  <span class="eq">Beam midpoint as a Duffing oscillator:
+    <b>m ÿ + c ẏ + k y + k<sub>3</sub> y³ = x(t)</b>, &nbsp;<b>x(t) = X sin(2πft)</b>;
+    m = 1 kg, c = 20 N·s/m, k = 1×10⁴ N/m, k<sub>3</sub> = 5×10⁹ N/m³
+    (f<sub>n</sub> ≈ 15.9 Hz, ζ = 0.1)</span>
+</header>
+
+<main>
+  <!-- Top-left: beam animation -->
+  <section class="panel" id="beamPanel">
+    <h2>Beam response</h2>
+    <div class="canvas-wrap"><canvas id="beamCanvas"></canvas></div>
+  </section>
+
+  <!-- Top-right: response time history -->
+  <section class="panel" id="timePanel">
+    <h2>Midpoint response time history</h2>
+    <div class="canvas-wrap"><canvas id="timeCanvas"></canvas></div>
+  </section>
+
+  <!-- Bottom-left: controls -->
+  <section class="panel" id="ctrlPanel">
+    <h2>Controls</h2>
+    <div class="controls">
+      <div class="col">
+      <fieldset>
+        <legend>Excitation x(t) = X sin(2πft)</legend>
+        <div class="ctl">
+          <label for="freq">Excitation frequency f <output id="freqOut"></output></label>
+          <div class="row">
+            <button id="fDown" title="Decrease frequency by one step (← key)">◀</button>
+            <input type="range" id="freq" min="1" max="60" step="0.1" value="10">
+            <button id="fUp" title="Increase frequency by one step (→ key)">▶</button>
+            <input type="number" id="freqNum" min="1" max="60" step="0.1" value="10"> Hz
+          </div>
+        </div>
+        <div class="ctl">
+          <label for="amp">Excitation amplitude X <output id="ampOut"></output></label>
+          <div class="row">
+            <input type="range" id="amp" min="0" max="30" step="0.5" value="1">
+            <input type="number" id="ampNum" min="0" max="30" step="0.5" value="1"> N
+          </div>
+        </div>
+        <div class="ctl">
+          <label for="slow">Time-slowing factor (animation) <output id="slowOut"></output></label>
+          <div class="row"><input type="range" id="slow" min="0" max="1000" step="1" value="565"></div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Simulation</legend>
+        <div class="btns" style="margin-top:0">
+          <button id="pause">Pause ❚❚</button>
+          <button id="reset" title="Set displacement and velocity to zero">Reset state</button>
+        </div>
+        <dl class="readouts" style="margin:8px 0 0">
+          <dt>Response amplitude Y</dt><dd id="roAmp">–</dd>
+          <dt>Gain Y/X</dt><dd id="roGain">–</dd>
+          <dt>Status</dt><dd id="roStatus">–</dd>
+          <dt>Sim. time</dt><dd id="roTime">–</dd>
+        </dl>
+      </fieldset>
+      </div>
+
+      <div class="col">
+      <fieldset>
+        <legend>Stepped sine sweep</legend>
+        <div class="sweep-grid">
+          <label for="swStart">Start</label><span><input type="number" id="swStart" min="1" max="60" step="0.5" value="1"> Hz</span>
+          <label for="swEnd">End</label><span><input type="number" id="swEnd" min="1" max="60" step="0.5" value="60"> Hz</span>
+          <label for="swStep">Step Δf</label><span><input type="number" id="swStep" min="0.05" max="10" step="0.05" value="0.5"> Hz</span>
+          <label for="swSpeed">Speed</label>
+          <select id="swSpeed" title="How fast simulated time runs during a sweep">
+            <option value="0">Slow-motion (as animation)</option>
+            <option value="0.25">¼× real time</option>
+            <option value="1" selected>1× real time</option>
+            <option value="4">4× real time</option>
+            <option value="16">16× real time</option>
+          </select>
+        </div>
+        <label class="opt" title="The sweep runs at the chosen speed; the animation loops the most recently measured steady-state cycle at the slow-motion rate.">
+          <input type="checkbox" id="swDecouple" checked>
+          <span>Slow-motion animation during sweep (sweep speed unaffected)</span></label>
+        <div class="btns">
+          <button id="sweepUp" class="primary">Sweep up ▲</button>
+          <button id="sweepDown" class="primary">Sweep down ▼</button>
+          <button id="sweepStop" disabled>Stop ■</button>
+        </div>
+        <div class="progress"><div id="sweepBar"></div></div>
+        <p class="hint">At each step the sweep waits for steady state, records the gain, then moves on.
+          The state is <em>not</em> reset between steps, so the response depends on its history.</p>
+        <p class="hint">Keyboard: ← / → step the frequency by Δf, space pauses.</p>
+      </fieldset>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom-right: gain plot -->
+  <section class="panel" id="gainPanel">
+    <h2>Gain: response amplitude Y / excitation amplitude X</h2>
+    <div class="canvas-wrap"><canvas id="gainCanvas"></canvas></div>
+    <div class="gainbar">
+      <label class="switch" title="When on, the steady-state gain at each frequency is stored as a point">
+        <input type="checkbox" id="record"><span class="track"></span>Record gain</label>
+      <button id="clear">Clear measurements</button>
+      <button id="csv" title="Download recorded points as a CSV file">Export CSV</button>
+      <span class="spacer"></span>
+      <label class="chk" title="Response of the linear system (k3 = 0)"><input type="checkbox" id="showLin"> Linear FRF</label>
+      <label class="chk"><input type="checkbox" id="showHB"> Theory (HB)</label>
+    </div>
+  </section>
+</main>
+
+<footer>
+  © 2026 Aidan Hughes, Dynamics Research Group, University of Sheffield ·
+  <a href="mailto:aidan.j.hughes@sheffield.ac.uk">aidan.j.hughes@sheffield.ac.uk</a> · v1.0 ·
+  <a href="https://opensource.org/license/mit" target="_blank" rel="noopener">MIT License</a>
+</footer>
+
+<canvas id="overlay"></canvas>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * NOTATION (matches the course)
+ *   x(t) = X sin(2πft)  excitation (input force), amplitude X in N
+ *   y(t)                response (beam midpoint displacement), amplitude Y in m
+ *   gain = Y / X        (displayed in mm/N)
+ *
+ * MODEL PARAMETERS
+ * ===================================================================== */
+const P = { m: 1, c: 20, k: 1e4, k3: 5e9 };
+const FN = Math.sqrt(P.k / P.m) / (2 * Math.PI);    // linear natural frequency (Hz)
+const TWO_PI = 2 * Math.PI;
+const X_MAX = 30;             // max excitation amplitude on the slider (N)
+
+const DT = 2e-5;              // RK4 step (s): >800 steps per cycle at 60 Hz
+const MAX_STEPS_FRAME = 60000;
+const SAMPLE_DT = 1e-4;       // time-history sample interval (s)
+const SAMPLE_EVERY = Math.round(SAMPLE_DT / DT);
+const BUF_N = 4096;           // ring-buffer length (0.41 s of history)
+const WINDOW = 0.25;          // visible time-history window (s)
+const NB = 256;               // phase bins used to capture one steady-state cycle
+
+// Steady-state detection
+const SETTLE_CYCLES = 5;      // compare the peak amplitude of the last N forcing cycles
+const SETTLE_TOL = 0.005;     // ...and require them to agree within 0.5 %
+const MIN_DWELL = 0.1;        // s of simulated time after any change (≈ 1/(ζ ωn))
+const MAX_DWELL = 2.0;        // sweep moves on regardless after this long
+
+/* =====================================================================
+ * SIMULATION STATE + PHYSICS
+ * ===================================================================== */
+const sim = {
+  y: 0, yd: 0, ph: 0, t: 0,   // response, velocity, forcing phase, simulated time
+  f: 10, X: 1,                // excitation frequency (Hz) and amplitude (N)
+  paused: false,
+  stepDebt: 0, stepCount: 0,
+  cyclePeak: 0, cycleAmps: [], Y: 0,   // Y = peak |y| over the last completed cycle
+  tSinceChange: 0, settled: false,
+  bin: -1,
+};
+// One forcing cycle of y sampled in NB phase bins (filled while integrating).
+const cycleBuf = new Float64Array(NB);
+const lastCycle = { f: 0, X: 0, Y: 0, y: new Float64Array(NB), valid: false };
+
+// Time-history ring buffer (whatever is being displayed: live or slow-motion replay).
+const buf = { t: new Float64Array(BUF_N), y: new Float64Array(BUF_N), x: new Float64Array(BUF_N), head: 0, count: 0 };
+function pushSample(t, y, x) {
+  buf.t[buf.head] = t; buf.y[buf.head] = y; buf.x[buf.head] = x;
+  buf.head = (buf.head + 1) % BUF_N;
+  if (buf.count < BUF_N) buf.count++;
+}
+
+function resetSettle() {
+  sim.cycleAmps.length = 0;
+  sim.tSinceChange = 0;
+  sim.settled = false;
+}
+
+function setFrequency(f) {
+  f = Math.min(60, Math.max(1, Math.round(f * 100) / 100));
+  if (f === sim.f) return;
+  sim.f = f;
+  resetSettle();
+  syncFreqUI();
+}
+
+function setExcitationAmp(X) {
+  X = Math.min(X_MAX, Math.max(0, X));
+  if (X === sim.X) return;
+  sim.X = X;
+  resetSettle();
+  hbCache = null;
+  ui.amp.value = X; ui.ampNum.value = X;
+}
+
+// Advance the simulation by simDuration seconds of simulated time.
+function advance(simDuration, recordDisplay) {
+  sim.stepDebt += simDuration / DT;
+  let n = Math.floor(sim.stepDebt);
+  sim.stepDebt -= n;
+  if (n > MAX_STEPS_FRAME) { n = MAX_STEPS_FRAME; sim.stepDebt = 0; }
+
+  const { m, c, k, k3 } = P;
+  let y = sim.y, v = sim.yd, ph = sim.ph;
+  const h = DT, h2 = DT / 2, binScale = NB / TWO_PI;
+
+  for (let i = 0; i < n; i++) {
+    const w = TWO_PI * sim.f, X = sim.X;   // re-read: a sweep may change f mid-batch
+    // RK4 on  y' = v,  v' = (X sin(ph) - c v - k y - k3 y^3) / m,  ph' = w
+    const s0 = X * Math.sin(ph), s1 = X * Math.sin(ph + w * h2), s2 = X * Math.sin(ph + w * h);
+    const a1 = (s0 - c * v - k * y - k3 * y * y * y) / m;
+    const y2 = y + h2 * v, v2 = v + h2 * a1;
+    const a2 = (s1 - c * v2 - k * y2 - k3 * y2 * y2 * y2) / m;
+    const y3 = y + h2 * v2, v3 = v + h2 * a2;
+    const a3 = (s1 - c * v3 - k * y3 - k3 * y3 * y3 * y3) / m;
+    const y4 = y + h * v3, v4 = v + h * a3;
+    const a4 = (s2 - c * v4 - k * y4 - k3 * y4 * y4 * y4) / m;
+    y += h / 6 * (v + 2 * v2 + 2 * v3 + v4);
+    v += h / 6 * (a1 + 2 * a2 + 2 * a3 + a4);
+    ph += w * h;
+    sim.t += h;
+    sim.tSinceChange += h;
+
+    const ay = Math.abs(y);
+    if (ay > sim.cyclePeak) sim.cyclePeak = ay;
+    if (++sim.stepCount % SAMPLE_EVERY === 0 && recordDisplay) pushSample(sim.t, y, X * Math.sin(ph));
+
+    if (ph >= TWO_PI) {               // one forcing cycle completed
+      ph -= TWO_PI;
+      sim.y = y; sim.yd = v; sim.ph = ph;
+      onCycleComplete();
+      sim.bin = -1;
+    }
+    const b = (ph * binScale) | 0;    // capture the waveform of the current cycle
+    if (b !== sim.bin) { cycleBuf[b] = y; sim.bin = b; }
+  }
+  sim.y = y; sim.yd = v; sim.ph = ph;
+}
+
+function onCycleComplete() {
+  const amp = sim.cyclePeak;
+  sim.cyclePeak = 0;
+  sim.Y = amp;
+  lastCycle.y.set(cycleBuf);
+  lastCycle.f = sim.f; lastCycle.X = sim.X; lastCycle.Y = amp; lastCycle.valid = true;
+
+  const a = sim.cycleAmps;
+  a.push(amp);
+  if (a.length > SETTLE_CYCLES) a.shift();
+
+  let settled = false;
+  if (sim.tSinceChange >= MIN_DWELL && a.length >= SETTLE_CYCLES) {
+    let mx = -Infinity, mn = Infinity;
+    for (const v of a) { if (v > mx) mx = v; if (v < mn) mn = v; }
+    settled = mx < 1e-12 || (mx - mn) <= SETTLE_TOL * mx;
+  }
+  sim.settled = settled;
+
+  if (sweep.active) {
+    if (settled || sim.tSinceChange >= MAX_DWELL) {
+      recordPoint(sweep.dir > 0 ? 'up' : 'down');
+      setReplayCycle();               // the animation shows this measured steady state
+      sweepAdvance();
+    }
+  } else if (settled && ui.record.checked) {
+    recordPoint('manual');
+  }
+}
+
+/* =====================================================================
+ * DISPLAY STATE
+ * Normally the display follows the live simulation. During a sweep with
+ * "slow-motion animation" ticked, the simulation runs at the sweep speed
+ * while the display loops the most recently measured steady-state cycle
+ * at the slow-motion rate (steady state is periodic, so the loop is exact).
+ * ===================================================================== */
+const BLEND_CYCLES = 0.25;    // crossfade between consecutive measured cycles (fraction of a cycle)
+const disp = { t: 0, y: 0, ph: 0, X: 0, Y: 0, f: 0, replay: false, sampleDebt: 0, blend: 1,
+  cycle: { f: 0, X: 0, Y: 0, y: new Float64Array(NB), valid: false },
+  prev: new Float64Array(NB) };
+
+function setReplayCycle() {
+  if (!lastCycle.valid) return;
+  const c = disp.cycle, pv = disp.prev, a = disp.blend;
+  if (c.valid) {
+    // what is currently on screen becomes the start of the next crossfade
+    for (let i = 0; i < NB; i++) pv[i] = (1 - a) * pv[i] + a * c.y[i];
+    disp.blend = 0;
+  } else disp.blend = 1;
+  c.y.set(lastCycle.y); c.f = lastCycle.f; c.X = lastCycle.X; c.Y = lastCycle.Y; c.valid = true;
+}
+
+function replayWanted() {
+  return sweep.active && sweepSpeed() > 0 && ui.swDecouple.checked && disp.cycle.valid;
+}
+
+function cycleValue(c, ph) {
+  const pos = ph / TWO_PI * NB, i0 = Math.floor(pos) % NB, fr = pos - Math.floor(pos);
+  return c.y[i0] * (1 - fr) + c.y[(i0 + 1) % NB] * fr;
+}
+
+function advanceReplay(dt) {
+  const c = disp.cycle, w = TWO_PI * c.f;
+  disp.sampleDebt += dt / SAMPLE_DT;
+  let n = Math.floor(disp.sampleDebt);
+  disp.sampleDebt -= n;
+  if (n > BUF_N) { n = BUF_N; disp.sampleDebt = 0; }
+  for (let i = 0; i < n; i++) {
+    disp.t += SAMPLE_DT;
+    disp.ph = (disp.ph + w * SAMPLE_DT) % TWO_PI;
+    disp.blend = Math.min(1, disp.blend + SAMPLE_DT * c.f / BLEND_CYCLES);
+    const yNew = cycleValue(c, disp.ph);
+    disp.y = disp.blend < 1 ? (1 - disp.blend) * cycleValue({ y: disp.prev }, disp.ph) + disp.blend * yNew : yNew;
+    pushSample(disp.t, disp.y, c.X * Math.sin(disp.ph));
+  }
+  disp.f = c.f; disp.X = c.X; disp.Y = c.Y;
+}
+
+function syncDisplayToSim() {
+  disp.t = sim.t; disp.y = sim.y; disp.ph = sim.ph;
+  disp.f = sim.f; disp.X = sim.X; disp.Y = sim.Y;
+}
+
+/* =====================================================================
+ * MEASUREMENTS (recorded gain points)
+ * ===================================================================== */
+const points = new Map();      // key -> {f, X, Y, gain, dir}
+const PALETTE = ['#1f6fd1', '#e07b00', '#7b52c7', '#169c78', '#d6338a', '#5f9a16', '#9a6a2a', '#0099b8'];
+const ampColour = new Map();   // excitation amplitude X -> colour
+
+function colourFor(X) {
+  const key = X.toFixed(2);
+  if (!ampColour.has(key)) ampColour.set(key, PALETTE[ampColour.size % PALETTE.length]);
+  return ampColour.get(key);
+}
+
+function recordPoint(dir) {
+  if (sim.X <= 0 || sim.Y <= 0) return;
+  const key = `${dir}|${sim.f.toFixed(2)}|${sim.X.toFixed(2)}`;
+  colourFor(sim.X);
+  points.set(key, { f: sim.f, X: sim.X, Y: sim.Y, gain: sim.Y / sim.X, dir });
+}
+
+function clearPoints() {
+  points.clear();
+  ampColour.clear();
+}
+
+function downloadCSV() {
+  const rows = [...points.values()].sort((a, b) => a.X - b.X || a.dir.localeCompare(b.dir) || a.f - b.f);
+  let csv = 'direction,frequency_f_Hz,excitation_amplitude_X_N,response_amplitude_Y_mm,gain_Y_over_X_mm_per_N\n';
+  for (const p of rows) csv += `${p.dir},${p.f.toFixed(2)},${p.X.toFixed(2)},${(p.Y * 1e3).toFixed(5)},${(p.gain * 1e3).toFixed(6)}\n`;
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'jump_phenomenon_gain.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* =====================================================================
+ * SWEEP CONTROLLER (stepped sine)
+ * ===================================================================== */
+const sweep = { active: false, dir: 1, fStart: 5, df: 0.5, i: 0, n: 0, recordWas: false };
+
+function startSweep(dir) {
+  const a = parseFloat(ui.swStart.value), b = parseFloat(ui.swEnd.value);
+  const df = Math.max(0.05, parseFloat(ui.swStep.value) || 0.5);
+  if (!isFinite(a) || !isFinite(b)) return;
+  const lo = Math.max(1, Math.min(a, b)), hi = Math.min(60, Math.max(a, b));
+  if (hi - lo < df) return;
+  if (!sweep.active) sweep.recordWas = ui.record.checked;
+  sweep.active = true;
+  sweep.dir = dir;
+  sweep.df = df;
+  sweep.n = Math.floor((hi - lo) / df + 1e-9);
+  sweep.i = 0;
+  sweep.fStart = dir > 0 ? lo : hi;
+  ui.record.checked = true;
+  disp.cycle.valid = false;
+  setReplayCycle();                  // until the first point is measured, show the current state
+  sim.f = NaN;                       // force setFrequency to reset the settle detector
+  setFrequency(sweep.fStart);
+  sim.paused = false;
+  updateButtons();
+}
+
+function sweepAdvance() {
+  sweep.i++;
+  if (sweep.i > sweep.n) { stopSweep(); return; }
+  setFrequency(sweep.fStart + sweep.dir * sweep.i * sweep.df);
+}
+
+function stopSweep() {
+  if (!sweep.active) return;
+  sweep.active = false;
+  ui.record.checked = sweep.recordWas;
+  updateButtons();
+}
+
+/* =====================================================================
+ * THEORY: harmonic balance (single harmonic) + linear FRF
+ * ===================================================================== */
+let hbCache = null;
+// Trace the HB amplitude–frequency curve parametrically in response amplitude Y.
+// For each Y:  (k + ¾k3Y² − mω²)² + (cω)² = (X/Y)²  →  quadratic in u = ω².
+// Stability (saddle-node criterion): dG/dZ > 0, where G(Z) = Z[(b + aZ)² + c²ω²], Z = Y², b = k − mω².
+function hbCurve(X) {
+  if (hbCache && hbCache.X === X) return hbCache.pts;
+  const { m, c, k, k3 } = P, a = 0.75 * k3;
+  const A = m * m;
+  const coeffs = Y => {
+    const K = k + a * Y * Y;
+    const B = -(2 * m * K - c * c), C = K * K - (X / Y) ** 2;
+    return { B, disc: B * B - 4 * A * C };
+  };
+  const left = [], right = [];
+  const N = 3000, l0 = Math.log(1e-6), l1 = Math.log(0.03);
+  let yValid = 0, yInvalid = 0;
+  for (let i = 0; i <= N; i++) {
+    const Y = Math.exp(l0 + (l1 - l0) * i / N);
+    const { B, disc } = coeffs(Y);
+    if (disc < 0) { if (yValid && !yInvalid) yInvalid = Y; continue; }
+    yValid = Y;
+    const s = Math.sqrt(disc);
+    const u1 = (-B - s) / (2 * A), u2 = (-B + s) / (2 * A);
+    if (u1 > 0) left.push([u1, Y]);
+    if (u2 > 0) right.push([u2, Y]);
+  }
+  // The two branches meet at the peak, where the discriminant is zero: locate it exactly
+  // (bisection) so the tip of the curve isn't cut off by the sampling.
+  const tip = [];
+  if (yValid && yInvalid) {
+    let lo = yValid, hi = yInvalid;
+    for (let it = 0; it < 60; it++) { const mid = 0.5 * (lo + hi); if (coeffs(mid).disc >= 0) lo = mid; else hi = mid; }
+    const u = -coeffs(lo).B / (2 * A);
+    if (u > 0) tip.push([u, lo]);
+  }
+  const ordered = left.concat(tip, right.reverse());
+  const pts = ordered.map(([u, Y]) => {
+    const Z = Y * Y, b = k - m * u;
+    const dG = (b + a * Z) ** 2 + c * c * u + 2 * a * Z * (b + a * Z);
+    return { f: Math.sqrt(u) / TWO_PI, g: Y / X, stable: dG > 0 };
+  });
+  hbCache = { X, pts };
+  return pts;
+}
+
+function linearGain(f) {
+  const w = TWO_PI * f;
+  return 1 / Math.hypot(P.k - P.m * w * w, P.c * w);
+}
+
+/* =====================================================================
+ * CANVAS UTILITIES
+ * ===================================================================== */
+function makeCanvas(id) {
+  const canvas = document.getElementById(id);
+  const obj = { canvas, ctx: canvas.getContext('2d'), w: 0, h: 0 };
+  const resize = () => {
+    const dpr = window.devicePixelRatio || 1;
+    const r = canvas.getBoundingClientRect();
+    obj.w = r.width; obj.h = r.height;
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    obj.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  new ResizeObserver(resize).observe(canvas.id === 'overlay' ? document.body : canvas);
+  window.addEventListener('resize', resize);
+  resize();
+  return obj;
+}
+
+function niceStep(range, target) {
+  const raw = range / Math.max(1, target);
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const r = raw / p;
+  return (r < 1.5 ? 1 : r < 3 ? 2 : r < 3.5 ? 2.5 : r < 7.5 ? 5 : 10) * p;
+}
+function niceCeil(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
+  return 10 * p;
+}
+function fmt(v, d) { return Number(v.toFixed(d)).toString(); }
+
+const AXIS_FONT = '12px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const GRID = '#e8ebf1', AXIS = '#9aa3b2', TEXT = '#5b6578';
+
+/* =====================================================================
+ * SHARED DISPLACEMENT SCALE (beam animation + time history)
+ * ===================================================================== */
+const view = {
+  yMax: 1e-3,                // half-range of the displacement axis (m)
+  pxPerM: 1,
+  zeroPageY: 0,              // page y of the y = 0 line in the time plot
+  dotPage: null,             // page coords of the red midpoint dot
+  nowPage: null,             // page coords of the newest time-history sample
+};
+
+function updateScale() {
+  const tNow = disp.t;
+  let maxAbs = 0;
+  for (let j = 0, idx = buf.head - 1; j < buf.count; j++, idx--) {
+    if (idx < 0) idx += BUF_N;
+    if (buf.t[idx] < tNow - WINDOW) break;
+    const a = Math.abs(buf.y[idx]);
+    if (a > maxAbs) maxAbs = a;
+  }
+  const target = Math.max(maxAbs * 1.15, 5e-5);
+  if (target > view.yMax) view.yMax += (target - view.yMax) * 0.35;
+  else if (target < 0.7 * view.yMax) view.yMax = Math.max(target, view.yMax * 0.985);
+}
+
+/* =====================================================================
+ * RENDER: TIME HISTORY (top-right)
+ * ===================================================================== */
+const timeC = makeCanvas('timeCanvas');
+const TM = { l: 58, r: 58, t: 26, b: 34 };
+const FORCE_INK = '#23864a';
+
+function renderTime() {
+  const { ctx, w, h } = timeC;
+  ctx.clearRect(0, 0, w, h);
+  const pw = w - TM.l - TM.r, ph = h - TM.t - TM.b;
+  if (pw < 20 || ph < 20) return;
+  const zeroY = TM.t + ph / 2;
+  view.pxPerM = (ph / 2) / view.yMax;
+  const tNow = disp.t, t0 = tNow - WINDOW;
+  const T = t => TM.l + (t - t0) / WINDOW * pw;
+  const Yp = y => zeroY - y * view.pxPerM;
+
+  ctx.font = AXIS_FONT;
+  // y grid + ticks (mm)
+  const yMaxMM = view.yMax * 1e3, ys = niceStep(2 * yMaxMM, 6);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = -Math.floor(yMaxMM / ys) * ys; v <= yMaxMM + 1e-12; v += ys) {
+    const py = Yp(v / 1e3);
+    ctx.strokeStyle = Math.abs(v) < 1e-9 ? AXIS : GRID; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(TM.l, py); ctx.lineTo(TM.l + pw, py); ctx.stroke();
+    ctx.fillStyle = TEXT; ctx.fillText(fmt(v, 3), TM.l - 6, py);
+  }
+  // time grid + ticks (scrolling)
+  const xs = niceStep(WINDOW, 5);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let t = Math.ceil(t0 / xs) * xs; t <= tNow + 1e-12; t += xs) {
+    const px = T(t);
+    ctx.strokeStyle = GRID; ctx.beginPath(); ctx.moveTo(px, TM.t); ctx.lineTo(px, TM.t + ph); ctx.stroke();
+    ctx.fillStyle = TEXT; ctx.fillText(fmt(t, 2), px, TM.t + ph + 4);
+  }
+  ctx.strokeStyle = AXIS; ctx.strokeRect(TM.l + .5, TM.t + .5, pw - 1, ph - 1);
+  ctx.fillStyle = TEXT; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(disp.replay ? 'Time (s), slow-motion replay of measured steady state' : 'Time (s)', TM.l + pw / 2, h - 2);
+  ctx.save(); ctx.translate(14, TM.t + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'middle'; ctx.fillText('Response y (mm)', 0, 0); ctx.restore();
+
+  // right-hand axis: excitation force x (N), sharing the zero line with y
+  const xTop = disp.X > 0 ? niceCeil(1.25 * disp.X) : 1;   // trace fills ~80 % of the half-height
+  const pxPerN = (ph / 2) / xTop;
+  const Xp = v => zeroY - v * pxPerN;
+  const fsStep = niceStep(2 * xTop, 6);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = FORCE_INK; ctx.fillStyle = FORCE_INK; ctx.lineWidth = 1;
+  for (let v = -Math.floor(xTop / fsStep + 1e-9) * fsStep; v <= xTop + 1e-9; v += fsStep) {
+    const py = Xp(v);
+    ctx.beginPath(); ctx.moveTo(TM.l + pw, py); ctx.lineTo(TM.l + pw + 5, py); ctx.stroke();
+    ctx.fillText(fmt(v, 2), TM.l + pw + 8, py);
+  }
+  ctx.save(); ctx.translate(w - 12, TM.t + ph / 2); ctx.rotate(Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.fillText('Excitation x (N)', 0, 0); ctx.restore();
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(TM.l, TM.t, pw, ph); ctx.clip();
+  const drawTrace = (arr, toY) => {
+    ctx.beginPath();
+    let started = false;
+    for (let j = buf.count - 1; j >= 0; j--) {
+      const idx = (buf.head - 1 - j + 2 * BUF_N) % BUF_N;
+      const t = buf.t[idx];
+      if (t < t0 - 1e-3 || t > tNow + 1e-9) continue;
+      const px = T(t), py = toY(arr[idx]);
+      if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  };
+  // excitation trace (right-hand axis)
+  if (disp.X > 0) {
+    ctx.strokeStyle = 'rgba(42,157,85,0.6)'; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+    drawTrace(buf.x, Xp);
+    ctx.setLineDash([]);
+  }
+  ctx.strokeStyle = '#1d3f8f'; ctx.lineWidth = 1.8;
+  drawTrace(buf.y, Yp);
+  ctx.restore();
+
+  // legend (top margin)
+  ctx.font = AXIS_FONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const lx = TM.l + 2, ly = TM.t - 13;
+  ctx.strokeStyle = '#1d3f8f'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 22, ly); ctx.stroke();
+  ctx.fillStyle = TEXT; ctx.fillText('response y(t)', lx + 28, ly);
+  const lx2 = lx + 28 + ctx.measureText('response y(t)').width + 18;
+  ctx.strokeStyle = 'rgba(42,157,85,0.8)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(lx2, ly); ctx.lineTo(lx2 + 22, ly); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillText('excitation x(t) (right axis)', lx2 + 28, ly);
+  if (disp.replay) {
+    ctx.textAlign = 'right'; ctx.fillStyle = '#b26a00';
+    ctx.fillText(`▶ replay: f = ${disp.f.toFixed(2)} Hz`, TM.l + pw, ly);
+  }
+
+  // current point
+  const nx = TM.l + pw, ny = Yp(disp.y);
+  ctx.fillStyle = 'rgba(214,39,40,0.9)';
+  ctx.beginPath(); ctx.arc(nx, ny, 4, 0, TWO_PI); ctx.fill();
+
+  const r = timeC.canvas.getBoundingClientRect();
+  view.zeroPageY = r.top + zeroY;
+  view.nowPage = { x: r.left + nx, y: r.top + ny };
+  view.timeRect = r;
+}
+
+/* =====================================================================
+ * RENDER: BEAM ANIMATION (top-left)
+ * ===================================================================== */
+const beamC = makeCanvas('beamCanvas');
+// First mode of a clamped–clamped beam, normalised to 1 at mid-span.
+const MODE = (() => {
+  const beta = 4.730040745, sigma = 0.982502215, N = 160;
+  const phi = s => Math.cosh(beta * s) - Math.cos(beta * s) - sigma * (Math.sinh(beta * s) - Math.sin(beta * s));
+  const mid = phi(0.5);
+  return Array.from({ length: N + 1 }, (_, i) => phi(i / N) / mid);
+})();
+
+function hatch(ctx, x, y, w, h) {
+  ctx.fillStyle = '#e3e6ec'; ctx.fillRect(x, y, w, h);
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.strokeStyle = '#9aa3b2'; ctx.lineWidth = 1;
+  for (let d = -h; d < w + h; d += 8) { ctx.beginPath(); ctx.moveTo(x + d, y + h); ctx.lineTo(x + d + h, y); ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = '#6b7487'; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+}
+
+function renderBeam() {
+  const { ctx, w, h } = beamC;
+  ctx.clearRect(0, 0, w, h);
+  const r = beamC.canvas.getBoundingClientRect();
+  // Align the beam's rest line with the time plot's zero line when the two panels sit side by side.
+  const tr = view.timeRect;
+  const sideBySide = tr && Math.abs(tr.top - r.top) < 4 && Math.abs(tr.height - r.height) < 4;
+  const baseY = sideBySide ? view.zeroPageY - r.top : h / 2;
+  const s = view.pxPerM;
+
+  const clampW = 26, x0 = clampW + 14, x1 = w - clampW - 14, L = x1 - x0;
+  const clampH = Math.min(h * 0.55, 160);
+  hatch(ctx, x0 - clampW, baseY - clampH / 2, clampW, clampH);
+  hatch(ctx, x1, baseY - clampH / 2, clampW, clampH);
+
+  // rest position
+  ctx.strokeStyle = '#b8bfcc'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(x0, baseY); ctx.lineTo(x1, baseY); ctx.stroke(); ctx.setLineDash([]);
+
+  // envelope of the last cycle
+  const A = disp.Y * s, N = MODE.length - 1;
+  if (A > 0.5) {
+    ctx.fillStyle = 'rgba(37,99,235,0.08)';
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) ctx.lineTo(x0 + L * i / N, baseY - A * MODE[i]);
+    for (let i = N; i >= 0; i--) ctx.lineTo(x0 + L * i / N, baseY + A * MODE[i]);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // beam
+  const d = disp.y * s;
+  ctx.strokeStyle = '#3b4a66'; ctx.lineWidth = 7; ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const px = x0 + L * i / N, py = baseY - d * MODE[i];
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // excitation arrow at mid-span
+  const mx = x0 + L / 2, my = baseY - d;
+  // Applied at the midpoint, starting from the edge of the red dot and pointing in the
+  // direction of x(t). Peak length grows with X but stays visible for small X; a faint
+  // track shows the ±X range so the arrow visibly shrinks through zero rather than vanishing.
+  if (disp.X > 0) {
+    const DOT_R = 9;
+    const Lpk = Math.min(h * 0.18, 64) * (0.4 + 0.6 * disp.X / X_MAX);
+    const len = Lpk * Math.sin(disp.ph);             // signed, + = upwards
+    const sgn = len >= 0 ? 1 : -1, aLen = Math.abs(len);
+    ctx.strokeStyle = 'rgba(42,157,85,0.25)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(mx, my - DOT_R - Lpk); ctx.lineTo(mx, my + DOT_R + Lpk); ctx.stroke();
+    for (const e of [-1, 1]) {                       // end ticks at ±X
+      const ty = my + e * (DOT_R + Lpk);
+      ctx.beginPath(); ctx.moveTo(mx - 5, ty); ctx.lineTo(mx + 5, ty); ctx.stroke();
+    }
+    const base = my - sgn * DOT_R, tipY = base - sgn * aLen;
+    const head = Math.min(11, aLen * 0.6), hw = head * 0.6;
+    ctx.strokeStyle = ctx.fillStyle = 'rgba(42,157,85,0.95)';
+    if (aLen > head) {
+      ctx.lineWidth = 3; ctx.lineCap = 'butt';
+      ctx.beginPath(); ctx.moveTo(mx, base); ctx.lineTo(mx, tipY + sgn * head); ctx.stroke();
+    }
+    if (head > 0.5) {
+      ctx.beginPath(); ctx.moveTo(mx, tipY); ctx.lineTo(mx - hw, tipY + sgn * head); ctx.lineTo(mx + hw, tipY + sgn * head);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.font = AXIS_FONT; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = FORCE_INK;
+    ctx.fillText('x(t)', mx - 10, my - DOT_R - Lpk + 2);
+  }
+
+  // red midpoint marker
+  ctx.fillStyle = '#d62728'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(mx, my, 7, 0, TWO_PI); ctx.fill(); ctx.stroke();
+
+  // annotations
+  ctx.font = AXIS_FONT; ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Deflection exaggerated: same vertical scale as the time-history plot', 10, h - 6);
+  ctx.textBaseline = 'top';
+  let note;
+  if (disp.replay) {
+    note = `Slow-motion (${fmt(slowdown(), 1)}×) replay of the steady state measured at f = ${disp.f.toFixed(2)} Hz` +
+           `; sweep running at ${sweepSpeedLabel()}`;
+    ctx.fillStyle = '#b26a00';
+  } else if (sweep.active && sweepSpeed() > 0) {
+    note = `Live; sweep running at ${sweepSpeedLabel()}`;
+  } else {
+    note = `Animation ${fmt(slowdown(), 1)}× slower than real time`;
+  }
+  ctx.fillText(note, 10, 8);
+
+  view.dotPage = { x: r.left + mx, y: r.top + my };
+}
+
+/* =====================================================================
+ * RENDER: CONNECTOR LINE (overlay)
+ * ===================================================================== */
+const overlay = makeCanvas('overlay');
+function renderOverlay() {
+  const { ctx, w, h } = overlay;
+  ctx.clearRect(0, 0, w, h);
+  if (!view.dotPage || !view.nowPage) return;
+  ctx.strokeStyle = 'rgba(214,39,40,0.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(view.dotPage.x, view.dotPage.y); ctx.lineTo(view.nowPage.x, view.nowPage.y); ctx.stroke();
+}
+
+/* =====================================================================
+ * RENDER: GAIN PLOT (bottom-right)
+ * ===================================================================== */
+const gainC = makeCanvas('gainCanvas');
+const GM = { l: 62, r: 16, t: 14, b: 40 };
+const DIR_LABEL = { up: 'sweep up', down: 'sweep down', manual: 'manual' };
+
+function marker(ctx, type, x, y, size) {
+  ctx.beginPath();
+  if (type === 'up') { ctx.moveTo(x, y - size); ctx.lineTo(x + size * 0.95, y + size * 0.7); ctx.lineTo(x - size * 0.95, y + size * 0.7); ctx.closePath(); }
+  else if (type === 'down') { ctx.moveTo(x, y + size); ctx.lineTo(x + size * 0.95, y - size * 0.7); ctx.lineTo(x - size * 0.95, y - size * 0.7); ctx.closePath(); }
+  else ctx.arc(x, y, size * 0.75, 0, TWO_PI);
+}
+
+function renderGain() {
+  const { ctx, w, h } = gainC;
+  ctx.clearRect(0, 0, w, h);
+  const pw = w - GM.l - GM.r, ph = h - GM.t - GM.b;
+  if (pw < 20 || ph < 20) return;
+  const fMax = 60;
+  const showLin = ui.showLin.checked, showHB = ui.showHB.checked && sim.X > 0;
+  const hb = showHB ? hbCurve(sim.X) : null;
+
+  // gain axis range (mm/N): fit recorded points and any shown theory
+  let gMax = 0;
+  for (const p of points.values()) gMax = Math.max(gMax, p.gain);
+  if (showLin) gMax = Math.max(gMax, linearGain(FN));
+  if (hb) for (const q of hb) if (q.f <= fMax) gMax = Math.max(gMax, q.g);
+  const gTop = gMax > 0 ? niceCeil(gMax * 1e3 * 1.08) : 0.6;
+  const Fp = f => GM.l + f / fMax * pw;
+  const Gp = g => GM.t + ph - (g * 1e3) / gTop * ph;   // g in m/N
+
+  ctx.font = AXIS_FONT;
+  const gs = niceStep(gTop, 5);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = 0; v <= gTop + 1e-12; v += gs) {
+    const py = GM.t + ph - v / gTop * ph;
+    ctx.strokeStyle = GRID; ctx.beginPath(); ctx.moveTo(GM.l, py); ctx.lineTo(GM.l + pw, py); ctx.stroke();
+    ctx.fillStyle = TEXT; ctx.fillText(fmt(v, 3), GM.l - 6, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let f = 0; f <= fMax + 1e-9; f += 5) {
+    const px = Fp(f);
+    ctx.strokeStyle = GRID; ctx.beginPath(); ctx.moveTo(px, GM.t); ctx.lineTo(px, GM.t + ph); ctx.stroke();
+    ctx.fillStyle = TEXT; ctx.fillText(String(f), px, GM.t + ph + 4);
+  }
+  ctx.strokeStyle = AXIS; ctx.strokeRect(GM.l + .5, GM.t + .5, pw - 1, ph - 1);
+  ctx.fillStyle = TEXT; ctx.textBaseline = 'bottom';
+  ctx.fillText('Excitation frequency f (Hz)', GM.l + pw / 2, h - 2);
+  ctx.save(); ctx.translate(14, GM.t + ph / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'middle'; ctx.fillText('Gain Y/X (mm/N)', 0, 0); ctx.restore();
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(GM.l, GM.t, pw, ph); ctx.clip();
+
+  // linear natural frequency marker (only with the linear FRF overlay)
+  if (showLin) {
+    ctx.strokeStyle = '#c9ced8'; ctx.setLineDash([2, 4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Fp(FN), GM.t); ctx.lineTo(Fp(FN), GM.t + ph); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#9aa3b2'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('fₙ', Fp(FN) + 3, GM.t + 3);
+  }
+
+  // theory curves
+  if (showLin) {
+    ctx.strokeStyle = '#8a93a3'; ctx.lineWidth = 1.5; ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    for (let i = 0; i <= 600; i++) { const f = 0.2 + (fMax - 0.2) * i / 600; const p = [Fp(f), Gp(linearGain(f))]; i ? ctx.lineTo(...p) : ctx.moveTo(...p); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (hb) {
+    // Draw each run of stable / unstable points as one continuous path so the dash pattern
+    // flows along the curve (per-segment sub-paths would restart the dash and look solid).
+    let i = 1;
+    while (i < hb.length) {
+      const stable = hb[i - 1].stable && hb[i].stable;
+      ctx.beginPath();
+      ctx.moveTo(Fp(hb[i - 1].f), Gp(hb[i - 1].g));
+      while (i < hb.length && (hb[i - 1].stable && hb[i].stable) === stable) {
+        if (hb[i].f <= fMax * 1.2 || hb[i - 1].f <= fMax * 1.2) ctx.lineTo(Fp(hb[i].f), Gp(hb[i].g));
+        i++;
+      }
+      ctx.strokeStyle = stable ? 'rgba(29,36,51,0.8)' : 'rgba(29,36,51,0.85)';
+      ctx.lineWidth = stable ? 1.6 : 1.6;
+      ctx.setLineDash(stable ? [] : [4, 4]);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  // recorded points
+  for (const p of points.values()) {
+    marker(ctx, p.dir, Fp(p.f), Gp(p.gain), 4.5);
+    ctx.fillStyle = colourFor(p.X); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // operating point being displayed (live, or the replayed measured state)
+  ctx.strokeStyle = 'rgba(214,39,40,0.35)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(Fp(disp.f), GM.t); ctx.lineTo(Fp(disp.f), GM.t + ph); ctx.stroke(); ctx.setLineDash([]);
+  if (disp.X > 0 && disp.Y > 0) {
+    const gy = Math.max(GM.t + 2, Gp(disp.Y / disp.X));
+    ctx.strokeStyle = sim.settled || disp.replay ? '#d62728' : 'rgba(214,39,40,0.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(Fp(disp.f), gy, 8, 0, TWO_PI); ctx.stroke();
+  }
+  ctx.restore();
+
+  // legend
+  const amps = [...ampColour.keys()].map(Number).sort((a, b) => a - b);
+  const dirs = new Set([...points.values()].map(p => p.dir));
+  const items = [];
+  for (const X of amps) items.push({ kind: 'X', X, label: `X = ${fmt(X, 2)} N` });
+  for (const d of ['up', 'down', 'manual']) if (dirs.has(d)) items.push({ kind: 'dir', d, label: DIR_LABEL[d] });
+  if (showLin) items.push({ kind: 'lin', label: 'linear FRF' });
+  if (hb) { items.push({ kind: 'hb', label: `HB theory, X = ${fmt(sim.X, 2)} N` }); items.push({ kind: 'hbu', label: 'HB unstable branch' }); }
+  items.push({ kind: 'live', label: disp.replay ? 'state shown in animation' : 'current operating point' });
+  ctx.font = AXIS_FONT;
+  const lw = Math.max(...items.map(it => ctx.measureText(it.label).width)) + 40, lh = 17;
+  const lhTot = items.length * lh + 8;
+  // Place the legend in whichever candidate spot covers the fewest data/theory points.
+  const marks = [];
+  for (const p of points.values()) marks.push([Fp(p.f), Gp(p.gain)]);
+  if (hb) for (let i = 0; i < hb.length; i += 3) if (hb[i].f <= fMax) marks.push([Fp(hb[i].f), Gp(hb[i].g)]);
+  if (showLin) for (let i = 0; i <= 120; i++) { const f = 0.5 + (fMax - 0.5) * i / 120; marks.push([Fp(f), Gp(linearGain(f))]); }
+  const candidates = [
+    [GM.l + pw - lw - 6, GM.t + 6],                         // top-right
+    [GM.l + 24, GM.t + 6],                                  // top-left
+    [GM.l + pw - lw - 6, GM.t + (ph - lhTot) * 0.45],       // middle-right
+    [GM.l + (pw - lw) / 2, GM.t + 6],                       // top-centre
+  ];
+  let best = candidates[0], bestN = Infinity;
+  for (const [cx0, cy0] of candidates) {
+    let n = 0;
+    for (const [mx, my] of marks) if (mx > cx0 - 6 && mx < cx0 + lw + 6 && my > cy0 - 6 && my < cy0 + lhTot + 6) n++;
+    if (n < bestN) { bestN = n; best = [cx0, cy0]; }
+  }
+  const [lx, ly] = best;
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.strokeStyle = '#e1e5ec'; ctx.lineWidth = 1;
+  ctx.fillRect(lx, ly, lw, lhTot); ctx.strokeRect(lx + .5, ly + .5, lw - 1, lhTot - 1);
+  items.forEach((it, i) => {
+    const cy = ly + 4 + lh * i + lh / 2, cx = lx + 14;
+    if (it.kind === 'X') { ctx.fillStyle = colourFor(it.X); ctx.fillRect(cx - 6, cy - 5, 12, 10); }
+    else if (it.kind === 'dir') { marker(ctx, it.d, cx, cy, 5); ctx.fillStyle = '#6b7487'; ctx.fill(); }
+    else if (it.kind === 'live') { ctx.strokeStyle = '#d62728'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, TWO_PI); ctx.stroke(); }
+    else {
+      ctx.strokeStyle = it.kind === 'lin' ? '#8a93a3' : 'rgba(29,36,51,0.75)'; ctx.lineWidth = 1.5;
+      ctx.setLineDash(it.kind === 'lin' ? [7, 5] : it.kind === 'hbu' ? [4, 4] : []);
+      ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.lineTo(cx + 9, cy); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(it.label, lx + 30, cy);
+  });
+
+  if (points.size === 0) {
+    ctx.fillStyle = '#9aa3b2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Turn on “Record gain” or run a sweep to log measurements', GM.l + pw / 2, GM.t + ph * 0.6);
+  }
+}
+
+/* =====================================================================
+ * UI
+ * ===================================================================== */
+const $ = id => document.getElementById(id);
+const ui = {
+  freq: $('freq'), freqNum: $('freqNum'), freqOut: $('freqOut'), fDown: $('fDown'), fUp: $('fUp'),
+  amp: $('amp'), ampNum: $('ampNum'), ampOut: $('ampOut'),
+  slow: $('slow'), slowOut: $('slowOut'),
+  swStart: $('swStart'), swEnd: $('swEnd'), swStep: $('swStep'), swSpeed: $('swSpeed'), swDecouple: $('swDecouple'),
+  sweepUp: $('sweepUp'), sweepDown: $('sweepDown'), sweepStop: $('sweepStop'), sweepBar: $('sweepBar'),
+  pause: $('pause'), reset: $('reset'),
+  roAmp: $('roAmp'), roGain: $('roGain'), roStatus: $('roStatus'), roTime: $('roTime'),
+  record: $('record'), clear: $('clear'), csv: $('csv'), showLin: $('showLin'), showHB: $('showHB'),
+};
+
+const SLOW_MAX = 200;
+function slowdown() { return Math.pow(SLOW_MAX, ui.slow.value / 1000); }
+function sweepSpeed() { return parseFloat(ui.swSpeed.value); }
+function sweepSpeedLabel() { return ui.swSpeed.options[ui.swSpeed.selectedIndex].text; }
+function simRate() {
+  if (sweep.active && sweepSpeed() > 0) return sweepSpeed();
+  return 1 / slowdown();
+}
+
+function syncFreqUI() {
+  ui.freq.value = sim.f;
+  ui.freqNum.value = fmt(sim.f, 2);
+  ui.freqOut.textContent = `${sim.f.toFixed(2)} Hz`;
+}
+function nudgeStep() { return Math.max(0.05, parseFloat(ui.swStep.value) || 0.5); }
+
+function updateButtons() {
+  const on = sweep.active;
+  ui.freq.disabled = ui.freqNum.disabled = ui.fDown.disabled = ui.fUp.disabled = on;
+  ui.record.disabled = on;
+  ui.sweepStop.disabled = !on;
+  ui.pause.textContent = sim.paused ? 'Resume ▶' : 'Pause ❚❚';
+}
+
+ui.freq.addEventListener('input', () => setFrequency(parseFloat(ui.freq.value)));
+ui.freqNum.addEventListener('change', () => { const v = parseFloat(ui.freqNum.value); if (isFinite(v)) setFrequency(v); syncFreqUI(); });
+ui.fDown.addEventListener('click', () => setFrequency(sim.f - nudgeStep()));
+ui.fUp.addEventListener('click', () => setFrequency(sim.f + nudgeStep()));
+ui.amp.addEventListener('input', () => setExcitationAmp(parseFloat(ui.amp.value)));
+ui.ampNum.addEventListener('change', () => { const v = parseFloat(ui.ampNum.value); if (isFinite(v)) setExcitationAmp(v); ui.ampNum.value = sim.X; });
+ui.slow.addEventListener('input', () => { ui.slowOut.textContent = `${fmt(slowdown(), 1)}× slower`; });
+ui.sweepUp.addEventListener('click', () => startSweep(+1));
+ui.sweepDown.addEventListener('click', () => startSweep(-1));
+ui.sweepStop.addEventListener('click', stopSweep);
+ui.pause.addEventListener('click', () => { sim.paused = !sim.paused; updateButtons(); });
+ui.reset.addEventListener('click', () => {
+  sim.y = sim.yd = 0; sim.Y = 0; sim.cyclePeak = 0;
+  buf.count = 0; buf.head = 0;
+  resetSettle();
+});
+ui.clear.addEventListener('click', clearPoints);
+ui.csv.addEventListener('click', downloadCSV);
+
+document.addEventListener('keydown', e => {
+  if (sweep.active || e.target.tagName === 'INPUT' && e.target.type === 'number' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    if (e.target === ui.freq) return;  // the slider handles its own arrow keys
+    e.preventDefault();
+    setFrequency(sim.f + (e.key === 'ArrowRight' ? 1 : -1) * nudgeStep());
+  } else if (e.key === ' ' && e.target.tagName !== 'BUTTON') {
+    e.preventDefault(); sim.paused = !sim.paused; updateButtons();
+  }
+});
+
+function updateReadouts() {
+  ui.ampOut.textContent = `${fmt(sim.X, 2)} N`;
+  ui.roAmp.textContent = sim.Y > 0 ? `${(sim.Y * 1e3).toFixed(3)} mm` : '–';
+  ui.roGain.textContent = sim.X > 0 && sim.Y > 0 ? `${(sim.Y / sim.X * 1e3).toFixed(4)} mm/N` : '–';
+  const st = sim.paused ? 'Paused' : sim.settled ? (ui.record.checked ? 'Steady state ✓ (recording)' : 'Steady state ✓') : 'Settling…';
+  ui.roStatus.textContent = st;
+  ui.roStatus.className = sim.settled ? 'status-settled' : 'status-settling';
+  ui.roTime.textContent = `${sim.t.toFixed(2)} s`;
+  ui.sweepBar.style.width = sweep.active ? `${(100 * sweep.i / Math.max(1, sweep.n)).toFixed(1)}%` : '0%';
+}
+
+/* =====================================================================
+ * MAIN LOOP
+ * ===================================================================== */
+let lastTs = null;
+function frame(ts) {
+  const dtReal = lastTs === null ? 0 : Math.min((ts - lastTs) / 1000, 0.05);
+  lastTs = ts;
+  const replay = replayWanted();
+  if (!sim.paused) {
+    advance(dtReal * simRate(), !replay);
+    if (replay) advanceReplay(dtReal / slowdown());
+  }
+  if (!replay) syncDisplayToSim();
+  disp.replay = replay;
+  updateScale();
+  renderTime();
+  renderBeam();
+  renderOverlay();
+  renderGain();
+  updateReadouts();
+  requestAnimationFrame(frame);
+}
+
+syncFreqUI();
+ui.slowOut.textContent = `${fmt(slowdown(), 1)}× slower`;
+updateButtons();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
