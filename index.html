@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Virtual Labs | Dynamics in Engineering</title>
+  <meta name="description" content="Browser-based virtual laboratories for learning about dynamics in engineering.">
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #1d2330;
+      --muted: #5c6678;
+      --border: #dde1e8;
+      --accent: #1f5fbf;
+      --accent-soft: #e8f0fc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151c;
+        --card: #1a1f2a;
+        --text: #e8ebf1;
+        --muted: #9aa4b5;
+        --border: #2b3242;
+        --accent: #6aa0f5;
+        --accent-soft: #1e2a40;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 3rem 1.25rem 2rem; }
+    h1 { font-size: 2rem; margin: 0 0 0.5rem; }
+    h2 { font-size: 1.15rem; margin: 2.5rem 0 1rem; }
+    p { margin: 0 0 1rem; }
+    .intro { color: var(--muted); font-size: 1.05rem; }
+
+    .labs { display: grid; gap: 1rem; padding: 0; margin: 0; list-style: none; }
+    .lab {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.25rem;
+    }
+    .lab a.title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .lab a.title:hover, .lab a.title:focus-visible { text-decoration: underline; }
+    .lab p { margin: 0.35rem 0 0; color: var(--muted); }
+    .lab.soon { border-style: dashed; background: transparent; }
+    .lab.soon .title { font-size: 1.15rem; font-weight: 600; color: var(--muted); }
+    .tag {
+      display: inline-block;
+      margin-left: 0.5rem;
+      padding: 0.1rem 0.55rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      vertical-align: middle;
+    }
+
+    a { color: var(--accent); }
+    address { font-style: normal; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Virtual Labs</h1>
+    <p class="intro">
+      Virtual browser-based laboratories for learning about dynamics in engineering.
+    </p>
+
+    <h2>Available labs</h2>
+    <ul class="labs">
+      <li class="lab">
+        <a class="title" href="jump-phenomenon/">The Jump Phenomenon</a>
+        <p>Explore the jump phenomenon in a nonlinear oscillator.</p>
+      </li>
+
+      <!-- To add a new lab, copy the block above, change the folder name in
+           href and update the title and description. -->
+
+      <li class="lab soon">
+        <span class="title">Chaos</span><span class="tag">Coming soon</span>
+        <p>In development.</p>
+      </li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>
+      If you have any ideas for virtual labs that aren't included here,
+      please feel free to get in touch!
+    </p>
+    <address>
+      Dr Aidan Hughes<br>
+      Dynamics Research Group<br>
+      School of Mechanical, Aerospace, and Civil Engineering<br>
+      University of Sheffield<br>
+      <a href="mailto:aidan.j.hughes@sheffield.ac.uk">aidan.j.hughes@sheffield.ac.uk</a>
+    </address>
+
+    <footer>
+      <p>
+        Last updated: 15 November 2026.
+        Copyright &copy; 2026 Aidan Hughes. Released under the
+        <a href="https://github.com/aidan-hughes/virtual-labs/blob/main/LICENSE">MIT Licence</a>.
+      </p>
+    </footer>
+  </main>
+</body>
+</html>
