@@ -67,13 +67,14 @@
     gap: 8px 10px; align-content: start; }
   .controls > .col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   @media (max-width: 1150px) { .controls { grid-template-columns: minmax(0, 1fr); } }
-  fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0; padding: 6px 10px 8px; }
+  /* min-width: 0 overrides the UA default (min-content), which in Firefox made fieldsets overflow their grid column */
+  fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0; padding: 6px 10px 8px; min-width: 0; }
   legend { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 4px; }
   .ctl { margin: 4px 0 6px; }
   .ctl label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px; }
-  .ctl label output { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .ctl label output { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; margin-left: 8px; }
   .row { display: flex; align-items: center; gap: 6px; }
-  .row input[type=range] { flex: 1; min-width: 60px; }
+  .row input[type=range] { flex: 1 1 0; width: 0; min-width: 60px; }
   input[type=number] { width: 70px; font: inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; }
   select { font: inherit; padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; }
   button { font: inherit; padding: 4px 10px; border: 1px solid #c3cad6; border-radius: 5px; background: #f7f8fb;
